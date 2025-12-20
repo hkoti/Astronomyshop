@@ -1,4 +1,3 @@
-#EKS module
 #Code for eks cluster on AWS using Terraform modules
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
@@ -9,6 +8,8 @@ module "eks" {
   vpc_id = "vpc-xxxxxxxx"
   subnet_ids = ["subnet-xxxxxxxx", "subnet-yyyyyyyy", "subnet-zzzzzzzz"]
   control_plane_subnet_ids = ["subnet-xxxxxxxx", "subnet-yyyyyyyy", "subnet-zzzzzzzz"]
+
+  enable_irsa = true
 
   endpoint_private_access = true
   endpoint_public_access = true
@@ -25,7 +26,6 @@ module "eks" {
   ]
   kms_key_administrators = ["arn:aws:iam::123456789012:role/AdminRole"]
 
-  enable_irsa = true
   openid_connect_audiences = ["sts.amazonaws.com"]
   iam_role_name = "my-eks-cluster-role"
   iam_role_additional_policies = [
@@ -54,14 +54,14 @@ module "eks" {
   # Access entries/RBAC
   access_entries = [
     {
-      arn  = "arn:aws:iam::123456789012:role/AdminRole"
-      groups = ["system:masters"]
+      principal_arn  = aws_iam_role.eks_admin.arn
+      kubernetes_groups = ["system:masters"]
     },
     {
-      arn  = "arn:aws:iam::123456789012:role/ReadOnlyRole"
-      groups = ["system:readers"]
+      principal_arn  = aws_iam_role.jenkins_eks_access_role.arn
+      kubernetes_groups = ["jenkins-developers"]
     }
-  ]
+  ] 
 
   #Create Security Group for EKS Cluster
   create_security_group = true
@@ -84,19 +84,18 @@ module "eks" {
 
   #Self-managed Node Group 
   self_managed_node_groups = {
+    #1- Platform Node Group
+    /*
+    Workloads : CoreDNS, CNI, kube-proxy, ingress 
+    characteristics : stable; low CPU; Predicatable memory  
+    */
     platform = {
       desired_capacity = 2
       max_capacity     = 3
       min_capacity     = 1
 
-      ami_id =
-      ami_type =
-      pre_bootstrap_user_data =
-        bootstrap_extra_args =
-
         #IAM & Security
-      iam_role_name = 
-      iam_role_additional_policies = 
+
       create_iam_instance_profile = true
 
       #Node Security Hardening
@@ -120,12 +119,14 @@ module "eks" {
       labels = {
         role = "platform"
       }
-      taints = {
+      taints =[
+         {
         key    = "role"
         value  = "platform"
-        effect = "NoSchedule"
+        effect = "NO_SCHEDULE"
       }
-      kubelet_extra_args =
+      ]
+      
 
       #network and traffic control
       security_group_tags = {
@@ -153,28 +154,29 @@ module "eks" {
         Project     = "my-eks-project"
       }
 
-      instance_type = "t3.medium"
+      instance_type = var.instance_types["platform"]
 
-      key_name = "my-key-pair"
+
+      key_name = var.ssh_key_name
 
       additional_tags = {
         Name = "platform-node-group"
       }
     }
+
+      #2 - Observability Node Group
+    /*
+    Workloads : Opentelemetry collector; Metrics/logging agents
+    characteristics :   Memory heavy, steady usage, sensitive to OOM
+    */
 
     Observability = {
       desired_capacity = 1
       max_capacity     = 2
       min_capacity     = 1
 
-      ami_id =
-      ami_type =
-      pre_bootstrap_user_data =
-        bootstrap_extra_args =
-
         #IAM & Security
-      iam_role_name = 
-      iam_role_additional_policies = 
+
       create_iam_instance_profile = true
 
       #Node Security Hardening
@@ -196,14 +198,16 @@ module "eks" {
 
       #Kubernetes labels and isolation
       labels = {
-        role = "platform"
+        role = "Observability"
       }
-      taints = {
+      taints = [
+      {
         key    = "role"
-        value  = "platform"
-        effect = "NoSchedule"
+        value  = "Observability"
+        effect = "NO_SCHEDULE"
       }
-      kubelet_extra_args =
+      ]
+      
 
       #network and traffic control
       security_group_tags = {
@@ -231,36 +235,28 @@ module "eks" {
         Project     = "my-eks-project"
       }
 
-      instance_type = "t3.medium"
+      instance_type = var.instance_types["observability"]
 
-      key_name = "my-key-pair"
 
-      additional_tags = {
-        Name = "platform-node-group"
-      }
-
-      instance_type = "t3.small"
-
-      key_name = "my-key-pair"
+      key_name = var.ssh_key_name
 
       additional_tags = {
         Name = "observability-node-group"
       }
     }
-
+ 
+    #3 - Application Node Groups (JVM)
+        /*
+    Workloads :  JVM based services (Cart service, Checkout service)
+    characteristics : Heap heavy, GC sensitive  
+    */
     jvm = {
       desired_capacity = 2
       max_capacity     = 4
       min_capacity     = 1
 
-      ami_id =
-      ami_type =
-      pre_bootstrap_user_data =
-        bootstrap_extra_args =
-
         #IAM & Security
-      iam_role_name = 
-      iam_role_additional_policies = 
+
       create_iam_instance_profile = true
 
       #Node Security Hardening
@@ -284,12 +280,14 @@ module "eks" {
       labels = {
         role = "jvm"
       }
-      taints = {
+      taints = [
+      {
         key    = "role"
-        value  = "platform"
-        effect = "NoSchedule"
+        value  = "jvm"
+        effect = "NO_SCHEDULE"
       }
-      kubelet_extra_args =
+      ]
+      
 
       #network and traffic control
       security_group_tags = {
@@ -317,28 +315,27 @@ module "eks" {
         Project     = "my-eks-project"
       }
 
-      instance_type = "t3.medium"
+      instance_type = var.instance_types["jvm"]
 
-      key_name = "my-key-pair"
+      key_name = var.ssh_key_name
 
       additional_tags = {
         Name = "jvm-node-group"
       }
     }
 
+    #4 - Application Node Groups (Runtime)
+    /*
+    Workloads : (.NET, PHP, Ruby) based services 
+    characteristics : Moderate CPU & Memory; Horizontal scaling  
+    */
     managed_runtime = {
       desired_capacity = 3
       max_capacity     = 5
       min_capacity     = 2
 
-      ami_id =
-      ami_type =
-      pre_bootstrap_user_data =
-        bootstrap_extra_args =
-
         #IAM & Security
-      iam_role_name = 
-      iam_role_additional_policies = 
+
       create_iam_instance_profile = true
 
       #Node Security Hardening
@@ -362,12 +359,13 @@ module "eks" {
       labels = {
         role = "managed_runtime"
       }
-      taints = {
+      taints = [
+      {
         key    = "role"
-        value  = "platform"
-        effect = "NoSchedule"
+        value  = "managed_runtime"
+        effect = "NO_SCHEDULE"
       }
-      kubelet_extra_args =
+      ]
 
       #network and traffic control
       security_group_tags = {
@@ -395,28 +393,30 @@ module "eks" {
         Project     = "my-eks-project"
       }
 
-      instance_type = "t3.medium"
+      instance_type = var.instance_types["managed"]
 
-      key_name = "my-key-pair"
+
+      key_name = var.ssh_key_name
 
       additional_tags = {
         Name = "managed_runtime-node-group"
       }
     }
 
+    #5 - Additional Node Group (event_driven)
+    /*
+    Workloads : (Node.js, Python, Elixir) based services 
+    characteristics : IO-heavy; lower per pod CPU; Fast scale  
+    */
+    
     event_driven = {
       desired_capacity = 1
       max_capacity     = 2
       min_capacity     = 1
 
-      ami_id =
-      ami_type =
-      pre_bootstrap_user_data =
-        bootstrap_extra_args =
 
         #IAM & Security
-      iam_role_name = 
-      iam_role_additional_policies = 
+
       create_iam_instance_profile = true
 
       #Node Security Hardening
@@ -440,12 +440,13 @@ module "eks" {
       labels = {
         role = "event_driven"
       }
-      taints = {
+      taints = [
+      {
         key    = "role"
-        value  = "platform"
-        effect = "NoSchedule"
+        value  = "event_driven"
+        effect = "NO_SCHEDULE"
       }
-      kubelet_extra_args =
+      ]
 
       #network and traffic control
       security_group_tags = {
@@ -473,28 +474,27 @@ module "eks" {
         Project     = "my-eks-project"
       }
 
-      instance_type = "t3.medium"
+      instance_type = var.instance_types["event"]
 
-      key_name = "my-key-pair"
+
+      key_name = var.ssh_key_name
 
       additional_tags = {
         Name = "event_driven-node-group"
       }
     }
 
+    #6 - Additional Node Group (high_performance)
+    /*
+    Workloads : (Go, Rust, C++) based services 
+    characteristics : CPU bound, low GC, Predictable memory  
+    */
     high_performance = {
       desired_capacity = 2
       max_capacity     = 3
       min_capacity     = 1
 
-      ami_id =
-      ami_type =
-      pre_bootstrap_user_data =
-        bootstrap_extra_args =
-
-        #IAM & Security
-      iam_role_name = 
-      iam_role_additional_policies = 
+      #IAM & Security
       create_iam_instance_profile = true
 
       #Node Security Hardening
@@ -518,12 +518,14 @@ module "eks" {
       labels = {
         role = "high_performance"
       }
-      taints = {
+      taints =[
+         {
         key    = "role"
-        value  = "platform"
-        effect = "NoSchedule"
+        value  = "high_performance"
+        effect = "NO_SCHEDULE"
       }
-      kubelet_extra_args =
+      ]
+      
 
       #network and traffic control
       security_group_tags = {
@@ -551,28 +553,27 @@ module "eks" {
         Project     = "my-eks-project"
       }
 
-      instance_type = "t3.medium"
+      instance_type = var.instance_types["high_perf"]
 
-      key_name = "my-key-pair"
+      key_name = var.ssh_key_name
 
       additional_tags = {
         Name = "high_performance-node-group"
       }
     }
 
+    #7 - Additional Node Group (CiCd)
+    /*
+    Workloads : Jenkins agents 
+    characteristics : Burstable CPU, short lived, Cost effective  
+    */
     CiCd = {
       desired_capacity = 1
       max_capacity     = 2
       min_capacity     = 1
 
-      ami_id =
-      ami_type =
-      pre_bootstrap_user_data =
-        bootstrap_extra_args =
-
         #IAM & Security
-      iam_role_name = 
-      iam_role_additional_policies = 
+
       create_iam_instance_profile = true
 
       #Node Security Hardening
@@ -596,12 +597,13 @@ module "eks" {
       labels = {
         role = "CiCd"
       }
-      taints = {
+      taints = [
+      {
         key    = "role"
-        value  = "platform"
-        effect = "NoSchedule"
+        value  = "CiCd"
+        effect = "NO_SCHEDULE"
       }
-      kubelet_extra_args =
+      ]
 
       #network and traffic control
       security_group_tags = {
@@ -629,28 +631,27 @@ module "eks" {
         Project     = "my-eks-project"
       }
 
-      instance_type = "t3.medium"
+      instance_type = var.instance_types["cicd"]
 
-      key_name = "my-key-pair"
+      key_name = var.ssh_key_name
 
       additional_tags = {
         Name = "CiCd-node-group"
       }
     }
 
+    #8 - Additional Node Group (batch)
+    /*
+    Workloads : (Node.js, Python, Elixir) based services 
+    characteristics : mom-critical, interruptible, cost-effective  
+    */    
     batch = {
       desired_capacity = 2
       max_capacity     = 4
       min_capacity     = 1
 
-      ami_id =
-      ami_type =
-      pre_bootstrap_user_data =
-        bootstrap_extra_args =
+    #IAM & Security
 
-        #IAM & Security
-      iam_role_name = 
-      iam_role_additional_policies = 
       create_iam_instance_profile = true
 
       #Node Security Hardening
@@ -676,10 +677,10 @@ module "eks" {
       }
       taints = {
         key    = "role"
-        value  = "platform"
-        effect = "NoSchedule"
+        value  = "batch"
+        effect = "NO_SCHEDULE"
       }
-      kubelet_extra_args =
+      
 
       #network and traffic control
       security_group_tags = {
@@ -707,15 +708,13 @@ module "eks" {
         Project     = "my-eks-project"
       }
 
-      instance_type = "t3.medium"
+      instance_type = var.instance_types["batch"]
 
-      key_name = "my-key-pair"
+      key_name = var.ssh_key_name
 
       additional_tags = {
         Name = "batch-node-group"
       }
     }
   }
-
 }
-

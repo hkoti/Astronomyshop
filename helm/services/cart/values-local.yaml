@@ -1,0 +1,16 @@
+image:
+  repository: otel/demo
+
+  tag: latest-cart
+
+env:
+  - name: OTEL_SERVICE_NAME
+    value: cart
+  - name: CART_SERVICE_ADDR
+    value: "cart:8080"
+  - name: VALKEY_ADDR
+    value: "valkey-cart:6379"
+
+nodeSelector: {}
+tolerations: []
+

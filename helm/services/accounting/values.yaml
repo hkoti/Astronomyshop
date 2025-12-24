@@ -1,0 +1,63 @@
+replicaCount: 1
+
+image:
+  repository: ""
+  tag: ""
+
+service:
+  type: ClusterIP
+  port: 8080
+
+env:
+  - name: OTEL_SERVICE_NAME
+    value: accounting
+  - name: OTEL_EXPORTER_OTLP_ENDPOINT
+    value: http://otel-collector:4317
+
+resources:
+  requests:
+    cpu: 300m
+    memory: 512Mi
+  limits:
+    cpu: 800m
+    memory: 1Gi
+
+nodeSelector:
+  workload: jvm
+
+tolerations:
+  - key: workload
+    operator: Equal
+    value: jvm
+    effect: NoSchedule
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 2
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 2
+  failureThreshold: 3
+
+startupProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  failureThreshold: 30

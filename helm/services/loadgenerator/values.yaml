@@ -1,0 +1,38 @@
+replicaCount: 1
+
+image:
+  repository: ""
+  tag: ""
+
+service:
+  type: ClusterIP
+  port: 8089
+
+env:
+  - name: OTEL_SERVICE_NAME
+    value: load-generator
+  - name: FRONTEND_ADDR
+    value: frontend:8080
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+nodeSelector:
+  workload: batch
+
+tolerations:
+  - key: workload
+    operator: Equal
+    value: batch
+    effect: NoSchedule
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  

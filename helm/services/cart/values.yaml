@@ -40,8 +40,8 @@ service:
 
 resources: 
    limits:
-     cpu: 500m
-     memory: 512Mi
+     cpu: 300m
+     memory: 256Mi
    requests:
     cpu: 100m
     memory: 128Mi
@@ -54,4 +54,31 @@ tolerations:
     operator: Equal
     value: jvm
     effect: NoSchedule
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+  # targetMemoryUtilizationPercentage: 75
+
+
+
+livenessProbe:
+  tcpSocket:
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+
+readinessProbe:
+  tcpSocket:
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 5
+
+startupProbe:
+  tcpSocket:
+    port: 8080
+  failureThreshold: 30
+  periodSeconds: 5
 

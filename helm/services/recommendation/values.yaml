@@ -1,0 +1,56 @@
+replicaCount: 2
+
+image:
+  repository: ""
+  tag: ""
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8080
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+
+env:
+  - name: OTEL_SERVICE_NAME
+    value: recommendation
+  - name: OTEL_EXPORTER_OTLP_ENDPOINT
+    value: http://otel-collector:4317
+
+resources:
+  requests:
+    cpu: 500m
+    memory: 256Mi
+  limits:
+    cpu: 1000m
+    memory: 512Mi
+
+nodeSelector:
+  workload: high_perf
+
+tolerations:
+  - key: workload
+    operator: Equal
+    value: high_perf
+    effect: NoSchedule
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 2
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 2
+  failureThreshold: 3

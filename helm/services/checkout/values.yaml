@@ -1,0 +1,85 @@
+# Default values for checkout.
+replicaCount: 1
+
+image:
+  repository: ""
+  pullPolicy: IfNotPresent
+  tag: ""
+
+env:
+  - name: OTEL_SERVICE_NAME
+    value: checkout
+
+  - name: CHECKOUT_SERVICE_ADDR
+    value: "checkout:5050"
+
+  - name: CART_SERVICE_ADDR
+    value: "cart:8080"
+
+  - name: CURRENCY_SERVICE_ADDR
+    value: "currency:7000"
+
+  - name: PRODUCT_CATALOG_SERVICE_ADDR
+    value: "productcatalog:3550"
+
+  - name: PAYMENT_SERVICE_ADDR
+    value: "payment:50051"
+
+  - name: SHIPPING_SERVICE_ADDR
+    value: "shipping:50051"
+
+  - name: EMAIL_SERVICE_ADDR
+    value: "email:5000"
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  name: "checkout"
+
+service:
+  type: ClusterIP
+  port: 5050
+
+resources: 
+   limits:
+     cpu: 500m
+     memory: 512Mi
+   requests:
+    cpu: 100m
+    memory: 128Mi
+
+nodeSelector:
+  workload : jvm
+
+tolerations:
+  - key: workload
+    operator: Equal
+    value: jvm
+    effect: NoSchedule
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 2
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  timeoutSeconds: 2
+  failureThreshold: 3
+
+startupProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 10
+  periodSeconds: 5
+  failureThreshold: 30

@@ -24,13 +24,13 @@
 # appVersion: "1.16.0"
 
 apiVersion: v2
-name: cart
-description: Cart service for OpenTelemetry Astronomy Shop
+name: checkout
+description: Checkout service for OpenTelemetry Astronomy Shop
 type: application
 version: 0.1.0
 appVersion: "1.0.0"
+
 dependencies:
   - name: microservice-common
     version: 0.1.0
     repository: "file://../../library/microservice-common"
-

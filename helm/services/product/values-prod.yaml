@@ -22,7 +22,7 @@ ingress:
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
   hosts:
-    - host: cart.prod.example.com
+    - host: product.prod.example.com
       paths:
         - path: /
           pathType: Prefix

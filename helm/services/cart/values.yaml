@@ -82,3 +82,15 @@ startupProbe:
   failureThreshold: 30
   periodSeconds: 5
 
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts: []
+  tls: []
+
+pdb:
+  enabled: false
+  # Use ONE of the following (not both)
+  minAvailable: 1
+  # maxUnavailable: 1

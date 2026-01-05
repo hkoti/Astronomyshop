@@ -49,6 +49,10 @@ def call(Map config) {
       ENVIRONMENT  = config.environment ?: "dev"
     }
 
+    options {
+          disableConcurrentBuilds()
+          timestamps()
+        }
 
         stages {
             stage('1. Checkout Source Code') {
@@ -110,16 +114,21 @@ def call(Map config) {
                 steps {
                     container('helm') {
                         sh '''
+                           test -f ${config.helmChartPath}/values-${ENVIRONMENT}.yaml
+                      
                             helm upgrade --install ${SERVICE_NAME} ${config.helmChartPath} \
                             --namespace ${ENVIRONMENT} \
                             --create-namespace \
                             -f ${config.helmChartPath}/values.yaml \
                             -f ${config.helmChartPath}/values-${ENVIRONMENT}.yaml \
                             --set image.repository=${IMAGE_REPO} \
-                            --set image.tag=${IMAGE_TAG}
-                        '''
-                    }
+                            --set image.tag=${IMAGE_TAG} \
+                            --atomic \
+                            --wait \
+                            --timeout 10m
+                          '''
                 }
+              }
             }
 
         post {
@@ -129,11 +138,6 @@ def call(Map config) {
             failure {
                 echo "❌ FAILURE: ${config.serviceName} pipeline failed. Check console logs."
             }
-        }
-
-        options {
-          disableConcurrentBuilds()
-          timestamps()
         }
     }
 }

@@ -1,0 +1,9 @@
+aws-load-balancer-controller:
+  clusterName: ""
+  region: ""
+
+  serviceAccount:
+    create: false
+    name: aws-load-balancer-controller
+
+  replicaCount: 1

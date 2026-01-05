@@ -1,0 +1,19 @@
+external-dns:
+  provider: aws
+
+  policy: sync
+  registry: txt
+  txtOwnerId: ""
+
+  serviceAccount:
+    create: false
+    name: external-dns
+
+  sources:
+    - ingress
+
+  logLevel: info
+
+  interval: 1m
+
+  domainFilters: []

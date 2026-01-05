@@ -1,0 +1,4 @@
+external-dns:
+  txtOwnerId: dev
+  domainFilters:
+    - dev.example.com

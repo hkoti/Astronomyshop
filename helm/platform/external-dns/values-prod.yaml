@@ -1,0 +1,4 @@
+external-dns:
+  txtOwnerId: prod
+  domainFilters:
+    - example.com

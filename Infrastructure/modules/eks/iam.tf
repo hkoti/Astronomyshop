@@ -131,3 +131,149 @@ resource "aws_iam_role_policy_attachment" "jenkins_eks_access_policy_attachment"
   role       = aws_iam_role.jenkins_eks_access_role.name
   policy_arn = aws_iam_policy.jenkins_eks_access_policy.arn
 }
+
+
+#Load Balancer Controller
+#IAM role for aws load balancer controller
+resource "aws_iam_role" "alb_controller_role" {
+  name = "alb-controller-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Principal = {
+          Federated = aws_iam_openid_connect_provider.eks_oidc_provider.arn
+        }
+        Condition = {
+          StringEquals = {
+            "${replace(aws_iam_openid_connect_provider.eks_oidc_provider.url, "https://", "")}:sub" = "system:serviceaccount:kube-system:aws-load-balancer-controller"
+            "${replace(aws_iam_openid_connect_provider.eks_oidc_provider.url, "https://", "")}:aud" = "sts.amazonaws.com"
+          }
+        }
+      }
+    ]
+  })
+
+  tags = var.tags
+}
+
+
+#Iam policy for aws load balancer controller
+resource "aws_iam_policy" "alb_controller_policy" {
+  name        = "AWSLoadBalancerControllerPolicy"
+  description = "IAM policy for AWS Load Balancer Controller"
+
+  policy = file("${path.module}/policies/aws-load-balancer-controller-policy.json")
+}
+
+
+
+#Attach AWS managed policy for ALB controller
+resource "aws_iam_role_policy_attachment" "alb_controller_policy_attachment" {
+  role       = aws_iam_role.alb_controller_role.name
+  policy_arn = aws_iam_policy.alb_controller_policy.arn
+}
+
+#External DNS 
+#Iam role for external dns
+resource "aws_iam_role" "external_dns_role" {
+  name = "external-dns-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Principal = {
+          Federated = aws_iam_openid_connect_provider.eks_oidc_provider.arn
+        }
+        Condition = {
+          StringEquals = {
+            "${replace(aws_iam_openid_connect_provider.eks_oidc_provider.url, "https://", "")}:sub" = "system:serviceaccount:kube-system:external-dns"
+            "${replace(aws_iam_openid_connect_provider.eks_oidc_provider.url, "https://", "")}:aud" = "sts.amazonaws.com"
+          }
+        }
+      }
+    ]
+  })
+
+  tags = var.tags
+}
+
+#Iam policy for external dns
+resource "aws_iam_policy" "external_dns_policy" {
+  name        = "ExternalDNSPolicy"
+  description = "IAM policy for External DNS"
+
+  policy = file("${path.module}/policies/external-dns-policy.json")
+} 
+
+#Attach AWS managed policy for external dns
+resource "aws_iam_role_policy_attachment" "external_dns_policy_attachment" {
+  role       = aws_iam_role.external_dns_role.name
+  policy_arn = aws_iam_policy.external_dns_policy.arn
+}
+
+#Cluster Autoscaler
+#Iam role for cluster autoscaler
+resource "aws_iam_role" "cluster_autoscaler_role" {
+  name = "cluster-autoscaler-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Principal = {
+          Federated = aws_iam_openid_connect_provider.eks_oidc_provider.arn
+        }
+        Condition = {
+          StringEquals = {
+            "${replace(aws_iam_openid_connect_provider.eks_oidc_provider.url, "https://", "")}:sub" = "system:serviceaccount:kube-system:cluster-autoscaler"
+            "${replace(aws_iam_openid_connect_provider.eks_oidc_provider.url, "https://", "")}:aud" = "sts.amazonaws.com"
+          }
+        }
+      }
+    ]
+  })
+
+  tags = var.tags
+}
+
+#Iam policy for cluster autoscaler
+resource "aws_iam_policy" "cluster_autoscaler_policy" {
+  name        = "ClusterAutoscalerPolicy"
+  description = "IAM policy for Cluster Autoscaler"
+
+  policy = jsonencode({
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "autoscaling:DescribeAutoScalingGroups",
+        "autoscaling:DescribeAutoScalingInstances",
+        "autoscaling:DescribeLaunchConfigurations",
+        "autoscaling:DescribeTags",
+        "autoscaling:SetDesiredCapacity",
+        "autoscaling:TerminateInstanceInAutoScalingGroup",
+        "ec2:DescribeLaunchTemplateVersions"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+)
+}
+
+
+#Attach AWS managed policy for cluster autoscaler
+resource "aws_iam_role_policy_attachment" "cluster_autoscaler_policy_attachment" {
+  role       = aws_iam_role.cluster_autoscaler_role.name
+  policy_arn = aws_iam_policy.cluster_autoscaler_policy.arn
+}

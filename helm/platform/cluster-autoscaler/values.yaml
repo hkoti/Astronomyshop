@@ -1,0 +1,18 @@
+cluster-autoscaler:
+  cloudProvider: aws
+  awsRegion: ap-south-1
+
+  autoDiscovery:
+    clusterName: my-eks-cluster
+
+  rbac:
+    serviceAccount:
+      create: false
+      name: cluster-autoscaler
+
+  extraArgs:
+    balance-similar-node-groups: true
+    skip-nodes-with-local-storage: false
+    skip-nodes-with-system-pods: false
+
+  replicaCount: 1

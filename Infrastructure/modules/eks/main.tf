@@ -59,7 +59,7 @@ module "eks" {
     },
     {
       principal_arn  = aws_iam_role.jenkins_eks_access_role.arn
-      kubernetes_groups = ["jenkins-developers"]
+      kubernetes_groups = ["system:masters"]
     }
   ] 
 
@@ -152,6 +152,8 @@ module "eks" {
       auto_scaling_group_tags = {
         Environment = "dev"
         Project     = "my-eks-project"
+        "k8s.io/cluster-autoscaler/enabled"             = "true"
+        "k8s.io/cluster-autoscaler/my-eks-cluster"     = "owned"
       }
 
       instance_type = var.instance_types["platform"]
@@ -233,6 +235,8 @@ module "eks" {
       auto_scaling_group_tags = {
         Environment = "dev"
         Project     = "my-eks-project"
+        "k8s.io/cluster-autoscaler/enabled"             = "true"
+        "k8s.io/cluster-autoscaler/my-eks-cluster"     = "owned"
       }
 
       instance_type = var.instance_types["observability"]
@@ -313,6 +317,8 @@ module "eks" {
       auto_scaling_group_tags = {
         Environment = "dev"
         Project     = "my-eks-project"
+        "k8s.io/cluster-autoscaler/enabled"             = "true"
+        "k8s.io/cluster-autoscaler/my-eks-cluster"     = "owned"
       }
 
       instance_type = var.instance_types["jvm"]
@@ -391,6 +397,8 @@ module "eks" {
       auto_scaling_group_tags = {
         Environment = "dev"
         Project     = "my-eks-project"
+        "k8s.io/cluster-autoscaler/enabled"             = "true"
+        "k8s.io/cluster-autoscaler/my-eks-cluster"     = "owned"
       }
 
       instance_type = var.instance_types["managed"]
@@ -472,6 +480,8 @@ module "eks" {
       auto_scaling_group_tags = {
         Environment = "dev"
         Project     = "my-eks-project"
+        "k8s.io/cluster-autoscaler/enabled"             = "true"
+        "k8s.io/cluster-autoscaler/my-eks-cluster"     = "owned"
       }
 
       instance_type = var.instance_types["event"]
@@ -551,6 +561,8 @@ module "eks" {
       auto_scaling_group_tags = {
         Environment = "dev"
         Project     = "my-eks-project"
+        "k8s.io/cluster-autoscaler/enabled"             = "true"
+        "k8s.io/cluster-autoscaler/my-eks-cluster"     = "owned"
       }
 
       instance_type = var.instance_types["high_perf"]
@@ -629,6 +641,8 @@ module "eks" {
       auto_scaling_group_tags = {
         Environment = "dev"
         Project     = "my-eks-project"
+        "k8s.io/cluster-autoscaler/enabled"             = "true"
+        "k8s.io/cluster-autoscaler/my-eks-cluster"     = "owned"
       }
 
       instance_type = var.instance_types["cicd"]
@@ -706,6 +720,8 @@ module "eks" {
       auto_scaling_group_tags = {
         Environment = "dev"
         Project     = "my-eks-project"
+        "k8s.io/cluster-autoscaler/enabled"             = "true"
+        "k8s.io/cluster-autoscaler/my-eks-cluster"     = "owned"
       }
 
       instance_type = var.instance_types["batch"]

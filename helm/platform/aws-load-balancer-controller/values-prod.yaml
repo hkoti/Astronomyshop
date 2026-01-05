@@ -1,0 +1,5 @@
+aws-load-balancer-controller:
+  clusterName: my-eks-cluster
+  region: ap-south-1
+
+  replicaCount: 2

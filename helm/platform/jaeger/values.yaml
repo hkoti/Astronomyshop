@@ -1,0 +1,13 @@
+jaeger:
+  provisionDataStore:
+    cassandra: false
+
+  storage:
+    type: memory
+
+  allInOne:
+    enabled: true
+
+  query:
+    service:
+      type: ClusterIP

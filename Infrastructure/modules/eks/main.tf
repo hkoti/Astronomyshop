@@ -689,12 +689,14 @@ module "eks" {
       labels = {
         role = "batch"
       }
-      taints = {
+      taints = [
+      {
         key    = "role"
         value  = "batch"
         effect = "NO_SCHEDULE"
       }
-      
+      ]
+            
 
       #network and traffic control
       security_group_tags = {

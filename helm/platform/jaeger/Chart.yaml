@@ -1,0 +1,10 @@
+apiVersion: v2
+name: jaeger
+description: Jaeger tracing for EKS
+type: application
+version: 0.1.0
+
+dependencies:
+  - name: jaeger
+    version: 0.71.9
+    repository: https://jaegertracing.github.io/helm-charts

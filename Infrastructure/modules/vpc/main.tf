@@ -17,7 +17,7 @@ provider "aws" {
 
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "6.5.1"
+  version = "~>5.0" #"6.5.1"
 
   ############################
   # VPC Core

@@ -33,3 +33,19 @@ variable "kubernetes_version" {
   description = "The Kubernetes version for the EKS cluster"
   type        = string
 }
+
+variable "region" {
+  description = "The AWS region to deploy resources in"
+  type        = string
+}
+
+variable "vpc_id" {
+  description = "The ID of the VPC where EKS cluster will be deployed"
+  type        = string
+}
+
+variable "private_subnet_ids" {
+  description = "A list of private subnet IDs for the EKS cluster"
+  type        = list(string)
+}
+

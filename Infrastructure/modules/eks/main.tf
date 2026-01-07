@@ -1,67 +1,80 @@
 #Code for eks cluster on AWS using Terraform modules
+terraform {
+  required_version = ">= 1.5.0"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 6.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = var.region
+}
+
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "21.10.1"
 
   name = var.cluster_name
   kubernetes_version = var.kubernetes_version
-  vpc_id = module.vpc.vpc_id
-  subnet_ids = module.vpc.private_subnet_ids
-  control_plane_subnet_ids = module.vpc.private_subnet_ids
+  vpc_id = var.vpc_id
+  subnet_ids = var.private_subnet_ids
+  control_plane_subnet_ids = var.private_subnet_ids
 
   enable_irsa = true
 
   endpoint_private_access = true
-  endpoint_public_access = true
+  endpoint_public_access = false
   endpoint_public_access_cidrs = [""]
 
   enabled_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 
-  create_kms_key  = true
-  encryption_config = [
-    {
-      provider_arn = module.eks.kms_key_arn
-      resources    = ["secrets"]
-    }
-  ]
+  create_kms_key  = false
+  encryption_config = {}
+  
   kms_key_administrators = ["arn:aws:iam::123456789012:role/AdminRole"]
 
   openid_connect_audiences = ["sts.amazonaws.com"]
   iam_role_name = "my-eks-cluster-role"
-  iam_role_additional_policies = [
-    "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy",
-    "arn:aws:iam::aws:policy/AmazonEKSServicePolicy"
-  ]
+  iam_role_additional_policies = {
+  AmazonEKSClusterPolicy = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+  AmazonEKSServicePolicy = "arn:aws:iam::aws:policy/AmazonEKSServicePolicy"
+}
+
 
     #Cluster Addons
-  addons = [
-    {
-      name       = "vpc-cni"
-      version    = "v1.13.3-eksbuild.1"
-      resolve_conflicts = "OVERWRITE"
-    },
-    {
-      name       = "kube-proxy"
-      version    = "v1.33.7-eksbuild.1"
-      resolve_conflicts = "OVERWRITE"
-    },
-    {
-      name       = "coredns"
-      version    = "v1.10.1-eksbuild.1"
-      resolve_conflicts = "OVERWRITE"
-    }
-  ]
+addons = {
+  vpc-cni = {
+    addon_version     = "v1.13.3-eksbuild.1"
+    resolve_conflicts = "OVERWRITE"
+  }
+  kube-proxy = {
+    addon_version     = "v1.33.7-eksbuild.1"
+    resolve_conflicts = "OVERWRITE"
+  }
+  coredns = {
+    addon_version     = "v1.10.1-eksbuild.1"
+    resolve_conflicts = "OVERWRITE"
+  }
+}
+
+
   # Access entries/RBAC
-  access_entries = [
-    {
-      principal_arn  = aws_iam_role.eks_admin.arn
-      kubernetes_groups = ["system:masters"]
-    },
-    {
-      principal_arn  = aws_iam_role.jenkins_eks_access_role.arn
-      kubernetes_groups = ["system:masters"]
-    }
-  ] 
+access_entries = {
+  eks_admin = {
+    principal_arn     = aws_iam_role.eks_admin.arn
+    kubernetes_groups = ["system:masters"]
+  }
+
+  jenkins = {
+    principal_arn     = aws_iam_role.jenkins_eks_access_role.arn
+    kubernetes_groups = ["jenkins-developers"]
+  }
+}
+
 
   #Create Security Group for EKS Cluster
   create_security_group = true
@@ -104,16 +117,18 @@ module "eks" {
         http_put_response_hop_limit = 2
       }
       enable_monitoring = true
-      block_device_mappings = [
-        {
-          device_name = "/dev/xvda"
+      block_device_mappings = {
+        root = {
+        device_name = "/dev/xvda"
           ebs = {
-            volume_size = 50
-            volume_type = "gp3"
+            volume_size           = 50
+            volume_type           = "gp3"
             delete_on_termination = true
           }
         }
-      ]
+      }
+ 
+
 
       #Kubernetes labels and isolation
       labels = {
@@ -153,7 +168,7 @@ module "eks" {
         Environment = "dev"
         Project     = "my-eks-project"
         "k8s.io/cluster-autoscaler/enabled"             = "true"
-        "k8s.io/cluster-autoscaler/my-eks-cluster"     = "owned"
+        "k8s.io/cluster-autoscaler/${var.cluster_name}" = "owned"
       }
 
       instance_type = var.instance_types["platform"]
@@ -187,16 +202,17 @@ module "eks" {
         http_put_response_hop_limit = 2
       }
       enable_monitoring = true
-      block_device_mappings = [
-        {
+      block_device_mappings = {
+        root = {
           device_name = "/dev/xvda"
           ebs = {
-            volume_size = 50
-            volume_type = "gp3"
+            volume_size           = 50
+            volume_type           = "gp3"
             delete_on_termination = true
           }
         }
-      ]
+      }
+
 
       #Kubernetes labels and isolation
       labels = {
@@ -236,7 +252,7 @@ module "eks" {
         Environment = "dev"
         Project     = "my-eks-project"
         "k8s.io/cluster-autoscaler/enabled"             = "true"
-        "k8s.io/cluster-autoscaler/my-eks-cluster"     = "owned"
+        "k8s.io/cluster-autoscaler/${var.cluster_name}" = "owned"
       }
 
       instance_type = var.instance_types["observability"]
@@ -269,16 +285,17 @@ module "eks" {
         http_put_response_hop_limit = 2
       }
       enable_monitoring = true
-      block_device_mappings = [
-        {
+      block_device_mappings = {
+        root = {
           device_name = "/dev/xvda"
           ebs = {
-            volume_size = 50
-            volume_type = "gp3"
+            volume_size           = 50
+            volume_type           = "gp3"
             delete_on_termination = true
           }
         }
-      ]
+      }
+
 
       #Kubernetes labels and isolation
       labels = {
@@ -318,7 +335,7 @@ module "eks" {
         Environment = "dev"
         Project     = "my-eks-project"
         "k8s.io/cluster-autoscaler/enabled"             = "true"
-        "k8s.io/cluster-autoscaler/my-eks-cluster"     = "owned"
+        "k8s.io/cluster-autoscaler/${var.cluster_name}" = "owned"
       }
 
       instance_type = var.instance_types["jvm"]
@@ -350,16 +367,17 @@ module "eks" {
         http_put_response_hop_limit = 2
       }
       enable_monitoring = true
-      block_device_mappings = [
-        {
+      block_device_mappings = {
+        root = {
           device_name = "/dev/xvda"
           ebs = {
-            volume_size = 50
-            volume_type = "gp3"
+            volume_size           = 50
+            volume_type           = "gp3"
             delete_on_termination = true
           }
         }
-      ]
+      }
+
 
       #Kubernetes labels and isolation
       labels = {
@@ -398,7 +416,7 @@ module "eks" {
         Environment = "dev"
         Project     = "my-eks-project"
         "k8s.io/cluster-autoscaler/enabled"             = "true"
-        "k8s.io/cluster-autoscaler/my-eks-cluster"     = "owned"
+        "k8s.io/cluster-autoscaler/${var.cluster_name}" = "owned"
       }
 
       instance_type = var.instance_types["managed"]
@@ -433,16 +451,17 @@ module "eks" {
         http_put_response_hop_limit = 2
       }
       enable_monitoring = true
-      block_device_mappings = [
-        {
+      block_device_mappings = {
+        root = {
           device_name = "/dev/xvda"
           ebs = {
-            volume_size = 50
-            volume_type = "gp3"
+            volume_size           = 50
+            volume_type           = "gp3"
             delete_on_termination = true
           }
         }
-      ]
+      }
+
 
       #Kubernetes labels and isolation
       labels = {
@@ -481,7 +500,7 @@ module "eks" {
         Environment = "dev"
         Project     = "my-eks-project"
         "k8s.io/cluster-autoscaler/enabled"             = "true"
-        "k8s.io/cluster-autoscaler/my-eks-cluster"     = "owned"
+        "k8s.io/cluster-autoscaler/${var.cluster_name}" = "owned"
       }
 
       instance_type = var.instance_types["event"]
@@ -513,16 +532,17 @@ module "eks" {
         http_put_response_hop_limit = 2
       }
       enable_monitoring = true
-      block_device_mappings = [
-        {
+      block_device_mappings = {
+        root = {
           device_name = "/dev/xvda"
           ebs = {
-            volume_size = 50
-            volume_type = "gp3"
+            volume_size           = 50
+            volume_type           = "gp3"
             delete_on_termination = true
           }
         }
-      ]
+      }
+
 
       #Kubernetes labels and isolation
       labels = {
@@ -562,7 +582,7 @@ module "eks" {
         Environment = "dev"
         Project     = "my-eks-project"
         "k8s.io/cluster-autoscaler/enabled"             = "true"
-        "k8s.io/cluster-autoscaler/my-eks-cluster"     = "owned"
+        "k8s.io/cluster-autoscaler/${var.cluster_name}" = "owned"
       }
 
       instance_type = var.instance_types["high_perf"]
@@ -594,16 +614,17 @@ module "eks" {
         http_put_response_hop_limit = 2
       }
       enable_monitoring = true
-      block_device_mappings = [
-        {
+      block_device_mappings = {
+        root = {
           device_name = "/dev/xvda"
           ebs = {
-            volume_size = 50
-            volume_type = "gp3"
+            volume_size           = 50
+            volume_type           = "gp3"
             delete_on_termination = true
           }
         }
-      ]
+      }
+
 
       #Kubernetes labels and isolation
       labels = {
@@ -642,7 +663,7 @@ module "eks" {
         Environment = "dev"
         Project     = "my-eks-project"
         "k8s.io/cluster-autoscaler/enabled"             = "true"
-        "k8s.io/cluster-autoscaler/my-eks-cluster"     = "owned"
+        "k8s.io/cluster-autoscaler/${var.cluster_name}" = "owned"
       }
 
       instance_type = var.instance_types["cicd"]
@@ -674,16 +695,17 @@ module "eks" {
         http_put_response_hop_limit = 2
       }
       enable_monitoring = true
-      block_device_mappings = [
-        {
+      block_device_mappings = {
+        root = {
           device_name = "/dev/xvda"
           ebs = {
-            volume_size = 50
-            volume_type = "gp3"
+            volume_size           = 50
+            volume_type           = "gp3"
             delete_on_termination = true
           }
         }
-      ]
+      }
+
 
       #Kubernetes labels and isolation
       labels = {
@@ -723,7 +745,8 @@ module "eks" {
         Environment = "dev"
         Project     = "my-eks-project"
         "k8s.io/cluster-autoscaler/enabled"             = "true"
-        "k8s.io/cluster-autoscaler/my-eks-cluster"     = "owned"
+        "k8s.io/cluster-autoscaler/${var.cluster_name}" = "owned"
+
       }
 
       instance_type = var.instance_types["batch"]

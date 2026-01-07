@@ -12,3 +12,6 @@ instance_types = {
 cluster_name = "astronomyshop-dev"
 
 kubernetes_version = "1.33"
+
+region       = "ap-south-1"
+

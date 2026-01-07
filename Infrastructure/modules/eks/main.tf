@@ -2,12 +2,12 @@
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
   version = "21.10.1"
-  
-  name = "my-eks-cluster"
-  kubernetes_version = "1.33"
-  vpc_id = "vpc-xxxxxxxx"
-  subnet_ids = ["subnet-xxxxxxxx", "subnet-yyyyyyyy", "subnet-zzzzzzzz"]
-  control_plane_subnet_ids = ["subnet-xxxxxxxx", "subnet-yyyyyyyy", "subnet-zzzzzzzz"]
+
+  name = var.cluster_name
+  kubernetes_version = var.kubernetes_version
+  vpc_id = module.vpc.vpc_id
+  subnet_ids = module.vpc.private_subnet_ids
+  control_plane_subnet_ids = module.vpc.private_subnet_ids
 
   enable_irsa = true
 
@@ -133,7 +133,7 @@ module "eks" {
         Environment = "dev"
         Project     = "my-eks-project"
       }
-      associate_public_ip_address = true
+      associate_public_ip_address = false
         additional_security_group_ids = []
       
       #Obeservability & Cloud operations
@@ -216,7 +216,7 @@ module "eks" {
         Environment = "dev"
         Project     = "my-eks-project"
       }
-      associate_public_ip_address = true
+      associate_public_ip_address = false
         additional_security_group_ids = []
       
       #Obeservability & Cloud operations
@@ -298,7 +298,7 @@ module "eks" {
         Environment = "dev"
         Project     = "my-eks-project"
       }
-      associate_public_ip_address = true
+      associate_public_ip_address = false
         additional_security_group_ids = []
       
       #Obeservability & Cloud operations
@@ -378,7 +378,7 @@ module "eks" {
         Environment = "dev"
         Project     = "my-eks-project"
       }
-      associate_public_ip_address = true
+      associate_public_ip_address = false
         additional_security_group_ids = []
       
       #Obeservability & Cloud operations
@@ -461,7 +461,7 @@ module "eks" {
         Environment = "dev"
         Project     = "my-eks-project"
       }
-      associate_public_ip_address = true
+      associate_public_ip_address = false
         additional_security_group_ids = []
       
       #Obeservability & Cloud operations
@@ -542,7 +542,7 @@ module "eks" {
         Environment = "dev"
         Project     = "my-eks-project"
       }
-      associate_public_ip_address = true
+      associate_public_ip_address = false
         additional_security_group_ids = []
       
       #Obeservability & Cloud operations
@@ -622,7 +622,7 @@ module "eks" {
         Environment = "dev"
         Project     = "my-eks-project"
       }
-      associate_public_ip_address = true
+      associate_public_ip_address = false
         additional_security_group_ids = []
       
       #Obeservability & Cloud operations
@@ -703,7 +703,7 @@ module "eks" {
         Environment = "dev"
         Project     = "my-eks-project"
       }
-      associate_public_ip_address = true
+      associate_public_ip_address = false
         additional_security_group_ids = []
       
       #Obeservability & Cloud operations

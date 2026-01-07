@@ -23,3 +23,13 @@ variable "instance_types" {
   description = "Instance type per workload-based node group"
   type        = map(string)
 }
+
+variable "cluster_name" {
+  description = "The name of the EKS cluster"
+  type        = string
+}
+
+variable "kubernetes_version" {
+  description = "The Kubernetes version for the EKS cluster"
+  type        = string
+}

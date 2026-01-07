@@ -204,13 +204,40 @@ resource "aws_iam_role" "external_dns_role" {
   tags = var.tags
 }
 
-#Iam policy for external dns
+
+############################################
+# IAM Policy for External DNS
+############################################
+
 resource "aws_iam_policy" "external_dns_policy" {
   name        = "ExternalDNSPolicy"
-  description = "IAM policy for External DNS"
+  description = "IAM policy for External DNS to manage Route53 records"
 
-  policy = file("${path.module}/policies/external-dns-policy.json")
-} 
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "route53:ChangeResourceRecordSets"
+        ]
+        Resource = [
+          "arn:aws:route53:::hostedzone/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "route53:ListHostedZones",
+          "route53:ListResourceRecordSets",
+          "route53:ListTagsForResource"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
 
 #Attach AWS managed policy for external dns
 resource "aws_iam_role_policy_attachment" "external_dns_policy_attachment" {
@@ -247,29 +274,33 @@ resource "aws_iam_role" "cluster_autoscaler_role" {
 
 #Iam policy for cluster autoscaler
 resource "aws_iam_policy" "cluster_autoscaler_policy" {
-  name        = "ClusterAutoscalerPolicy"
-  description = "IAM policy for Cluster Autoscaler"
+  name = "ClusterAutoscalerPolicy"
 
   policy = jsonencode({
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "autoscaling:DescribeAutoScalingGroups",
-        "autoscaling:DescribeAutoScalingInstances",
-        "autoscaling:DescribeLaunchConfigurations",
-        "autoscaling:DescribeTags",
-        "autoscaling:SetDesiredCapacity",
-        "autoscaling:TerminateInstanceInAutoScalingGroup",
-        "ec2:DescribeLaunchTemplateVersions"
-      ],
-      "Resource": "*"
-    }
-  ]
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "autoscaling:DescribeAutoScalingGroups",
+          "autoscaling:DescribeAutoScalingInstances",
+          "autoscaling:DescribeLaunchConfigurations",
+          "autoscaling:DescribeTags",
+          "autoscaling:SetDesiredCapacity",
+          "autoscaling:TerminateInstanceInAutoScalingGroup",
+          "ec2:DescribeLaunchTemplateVersions"
+        ]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "autoscaling:ResourceTag/k8s.io/cluster-autoscaler/enabled" = "true"
+          }
+        }
+      }
+    ]
+  })
 }
-)
-}
+
 
 
 #Attach AWS managed policy for cluster autoscaler

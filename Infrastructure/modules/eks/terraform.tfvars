@@ -8,3 +8,7 @@ instance_types = {
   cicd          = "t3.large"
   batch         = "t3.small"
 }
+
+cluster_name = "astronomyshop-dev"
+
+kubernetes_version = "1.33"

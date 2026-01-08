@@ -20,15 +20,16 @@ module "eks" {
 
   name = var.cluster_name
   kubernetes_version = var.kubernetes_version
-  vpc_id = var.vpc_id
-  subnet_ids = var.private_subnet_ids
-  control_plane_subnet_ids = var.private_subnet_ids
+  vpc_id                     = data.terraform_remote_state.vpc.outputs.vpc_id
+  subnet_ids                 = data.terraform_remote_state.vpc.outputs.private_subnet_ids
+  control_plane_subnet_ids   = data.terraform_remote_state.vpc.outputs.private_subnet_ids
+
 
   enable_irsa = true
 
   endpoint_private_access = true
   endpoint_public_access = false
-  endpoint_public_access_cidrs = [""]
+  
 
   enabled_log_types = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
 
@@ -46,27 +47,27 @@ module "eks" {
 
 
     #Cluster Addons
-addons = {
-  vpc-cni = {
-    addon_version     = "v1.13.3-eksbuild.1"
-    resolve_conflicts = "OVERWRITE"
-  }
-  kube-proxy = {
-    addon_version     = "v1.33.7-eksbuild.1"
-    resolve_conflicts = "OVERWRITE"
-  }
-  coredns = {
-    addon_version     = "v1.10.1-eksbuild.1"
-    resolve_conflicts = "OVERWRITE"
-  }
-}
+    addons = {
+      vpc-cni = {
+        resolve_conflicts = "OVERWRITE"
+      }
+
+      kube-proxy = {
+        resolve_conflicts = "OVERWRITE"
+      }
+
+      coredns = {
+        resolve_conflicts = "OVERWRITE"
+      }
+    }
+
 
 
   # Access entries/RBAC
 access_entries = {
   eks_admin = {
     principal_arn     = aws_iam_role.eks_admin.arn
-    kubernetes_groups = ["system:masters"]
+    kubernetes_groups = ["eks-admins"]
   }
 
   jenkins = {
@@ -82,7 +83,7 @@ access_entries = {
   
 
   #Observability (cloudwatch)
-  cloudwatch_log_group_retention_in_days = 2
+  cloudwatch_log_group_retention_in_days = 1
 
 
   #tags

@@ -1,0 +1,90 @@
+@Library('jenkins-shared-library') _
+
+pipeline {
+  agent {
+    k8sAgent { }
+  }
+
+  parameters {
+    choice(
+      name: 'SERVICE_NAME',
+      choices: [
+        'cart',
+        'checkout',
+        'frontend',
+        'fraud-detection',
+        'payment',
+        'product-catalog',
+        'shipping'
+      ],
+      description: 'Service to deploy'
+    )
+  }
+
+  environment {
+    SERVICE_NAME      = params.SERVICE_NAME
+    ENVIRONMENT       = "dev"
+    SONAR_ORG         = "hkoti"
+    SONAR_PROJECT_KEY = "otel-${params.SERVICE_NAME}"
+    IMAGE_TAG         = sh(script: "git rev-parse --short HEAD", returnStdout: true).trim()
+    IMAGE_REPO        = "123456789012.dkr.ecr.ap-south-1.amazonaws.com/opentelemetry/${params.SERVICE_NAME}"
+    HELM_CHART_PATH   = "helm/${params.SERVICE_NAME}"
+  }
+
+  stages {
+
+    stage('Checkout') {
+      steps {
+        checkoutSource()
+      }
+    }
+
+    stage('SonarCloud Scan') {
+      steps {
+        sonarScan(
+          serviceName: SERVICE_NAME,
+          sonarProjectKey: SONAR_PROJECT_KEY,
+          sonarOrganization: SONAR_ORG,
+          sonarCredentialId: 'sonarcloud-token'
+        )
+      }
+    }
+
+    stage('Quality Gate') {
+      steps {
+        qualityGate()
+      }
+    }
+
+    stage('Build & Push Image') {
+      steps {
+        buildImage(
+          serviceName: SERVICE_NAME,
+          imageRepo: IMAGE_REPO,
+          imageTag: IMAGE_TAG
+        )
+      }
+    }
+
+    stage('Trivy Scan') {
+      steps {
+        trivyScan(
+          imageRepo: IMAGE_REPO,
+          imageTag: IMAGE_TAG
+        )
+      }
+    }
+
+    stage('Deploy') {
+      steps {
+        helmDeploy(
+          serviceName: SERVICE_NAME,
+          helmChartPath: HELM_CHART_PATH,
+          environment: ENVIRONMENT,
+          imageRepo: IMAGE_REPO,
+          imageTag: IMAGE_TAG
+        )
+      }
+    }
+  }
+}
